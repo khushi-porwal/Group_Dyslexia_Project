@@ -1,4 +1,6 @@
 import API from "../api/axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 import {
   View,
@@ -57,22 +59,26 @@ export default function LoginPreview() {
       password,
     });
 
-    // Save JWT
+    console.log("Login Success:", res.data);   // 👈 this will NOT be undefined
+
     await AsyncStorage.setItem("token", res.data.token);
 
     Alert.alert("Success", "Logged in successfully!");
+    router.replace("/main/HomeDashboard");
+  } 
+  catch (err) {
+    console.log("Login Error:", err.response?.data);
 
-    router.replace("/(tabs)");
-  } catch (err) {
-    console.log(err.response?.data);
     Alert.alert(
       "Login Failed",
       err.response?.data?.message || "Something went wrong"
     );
-  } finally {
+  } 
+  finally {
     setLoading(false);
   }
 };
+
 
 
   return (

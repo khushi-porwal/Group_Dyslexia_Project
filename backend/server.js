@@ -32,7 +32,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
-const rateLimit = require("express-rate-limit");
+
 const authRoutes = require("./routes/authRoutes");
 
 dotenv.config();
@@ -41,7 +41,8 @@ const app = express();
 // Security Middlewares
 app.use(helmet()); // secure headers
 app.use(cors({
-  origin: "http://localhost:8082", // Frontend URL
+  origin: ["http://localhost:8081", "http://localhost:8082"],
+  methods: "GET,POST,PUT,DELETE",
   credentials: true
 }));
 app.use(cookieParser());
@@ -49,12 +50,6 @@ app.use(cookieParser());
 // Basic middlewares
 app.use(express.json());
 
-// Rate Limiting - login par brute force attack rokne ke liye
-app.use("/api/auth/login", rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 min
-  max: 5,
-  message: "Too many login attempts, please try later"
-}));
 
 // Routes
 app.use("/api/auth", authRoutes);
