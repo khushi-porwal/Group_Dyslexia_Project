@@ -8,8 +8,9 @@ export default function RootLayout() {
       <Stack.Screen name="index" />
 
       {/* Auth Screens */}
-      <Stack.Screen name="Authentication/login" />
-      <Stack.Screen name="Authentication/signup" />
+      <Stack.Screen name="authentication/login" />
+      <Stack.Screen name="authentication/signup" />
+      <Stack.Screen name="(main)"/>
 
       {/* Tabs */}
       <Stack.Screen name="(tabs)" />

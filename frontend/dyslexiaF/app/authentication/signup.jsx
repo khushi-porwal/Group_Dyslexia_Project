@@ -1,4 +1,6 @@
-import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
+import API from "../api/axios";
+
+import { View, Text, TextInput, TouchableOpacity, Image,Alert } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,15 +10,36 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignUp = () => {
-    console.log(name, email, password);
-    // connect backend / firebase here
-  };
+  const handleSignUp = async () => {
+  if (!name || !email || !password) {
+    console.log("Error", "All fields are required");
+    return;
+  }
+
+  try {
+    const res = await API.post("/signup", {
+      name,
+      email,
+      password,
+    });
+
+    Alert.alert("Success", "Account created!");
+    router.replace("/authentication/login");
+
+  } catch (err) {
+    console.log(err.response?.data);
+    Alert.alert(
+      "Signup Failed",
+      err.response?.data?.message || "Try again"
+    );
+  }
+};
+
 
   return (
-    <View className="flex-1 bg-[#E6B3F7] px-5">
+    <View className="flex-1 bg-[#DC9AF0] px-5">
 
-      <TouchableOpacity className="top-10">
+      <TouchableOpacity className="top-10"onPress={() => router.back('')}>
       <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
       {/* Header */}
@@ -28,7 +51,7 @@ export default function SignUpScreen() {
       </Text>
 
       {/* Image Card */}
-      <View className="bg-purple-200 rounded-2xl items-center mt-20 h-40">
+      <View className="rounded-2xl items-center mt-20 h-40">
         <Image
           source={require("../../assets/images/Monkey.png")}
           className="mt-[-90]"
@@ -83,13 +106,13 @@ export default function SignUpScreen() {
 
 
       {/* Login */}
-      <Text className="text-center text-sm mt-2">
+      <Text className="text-center text-xs mt-2">
         Already having an account?{" "}
         <Text
           className="text-purple-700 font-semibold"
           onPress={() => router.push("/authentication/login")}
         >
-          Logins
+          Login
         </Text>
       </Text>
 

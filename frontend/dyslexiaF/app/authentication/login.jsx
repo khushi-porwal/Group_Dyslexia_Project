@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import API from "../api/axios";
 import {
   View,
   Text,
@@ -42,38 +44,45 @@ export default function LoginPreview() {
 
   // 🔹 LOGIN HANDLER (BACKEND READY)
   const handleLogin = async () => {
-    if (!validateInputs()) return;
+    if (!email || !password) {
+      Alert.alert("Error", "Email & password are required");
+      return;
+    }
+
+    // Optional: Use the validation function
+    if (!validateInputs()) {
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const response = await fetch("https://YOUR_BACKEND_URL/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+      const res = await API.post("/login", {
+        email,
+        password,
       });
 
-      const data = await response.json();
+      console.log("Login Success:", res.data);
 
-      if (!response.ok) {
-        Alert.alert("Login Failed", data.message || "Something went wrong");
-        setLoading(false);
-        return;
+      // Store tokens
+      await AsyncStorage.setItem("token", res.data.token);
+      
+      if (res.data.refreshToken) {
+        await AsyncStorage.setItem("refreshToken", res.data.refreshToken);
       }
 
-      // ✅ SUCCESS (Later you can store token)
-      // Example:
-      // await AsyncStorage.setItem("token", data.token);
-
-      Alert.alert("Success", "Login successful!");
-    } catch (error) {
-      Alert.alert("Error", "Unable to connect to server");
+      Alert.alert("Success", "Logged in successfully!");
+      
+      // Navigate to home
+      router.push("/main/HomeDashboard");
+      
+    } catch (err) {
+      console.log("Login Error:", err?.response?.data || err?.message || err);
+      
+      Alert.alert(
+        "Login Failed",
+        err?.response?.data?.message || err?.message || "Something went wrong"
+      );
     } finally {
       setLoading(false);
     }
@@ -85,14 +94,13 @@ export default function LoginPreview() {
       contentContainerStyle={{
         paddingHorizontal: 22,
         paddingTop: 20,
-        
       }}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
       {/* Back Arrow */}
       <TouchableOpacity onPress={() => router.back()}>
-      <Ionicons name="arrow-back" size={24} color="black" />
+        <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
 
       {/* App Title */}
@@ -148,31 +156,30 @@ export default function LoginPreview() {
 
       {/* Login Button */}
       <View className="items-center mt-2">
-      <TouchableOpacity
-        
-        onPress={handleLogin}
-        disabled={loading}
-        className="bg-[#8E44AD] w-[200px]  py-3 rounded-full items-center"
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white  font-semibold text-lg">
-            Log In
-          </Text>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={loading}
+          className="bg-[#8E44AD] w-[200px]  py-3 rounded-full items-center"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white  font-semibold text-lg">
+              Log In
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Signup */}
       <View className="flex-row justify-center mt-4">
         <Text className="text-black text-sm">
-          Don’t have an account?
+          Don't have an account?
         </Text>
         <TouchableOpacity onPress={() => router.push("/authentication/signup")}>
-        <Text className="text-purple-800 font-semibold text-sm ml-1">
-          Sign Up
-        </Text>
+          <Text className="text-purple-800 font-semibold text-sm ml-1">
+            Sign Up
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
