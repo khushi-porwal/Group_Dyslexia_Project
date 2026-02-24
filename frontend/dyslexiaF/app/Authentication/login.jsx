@@ -67,16 +67,15 @@ export default function LoginPreview() {
     router.replace("/main/HomeDashboard");
   } 
   catch (err) {
-    console.log("Login Error:", err.response?.data);
-
-    Alert.alert(
-      "Login Failed",
-      err.response?.data?.message || "Something went wrong"
-    );
-  } 
-  finally {
-    setLoading(false);
-  }
+      console.log("Login Error:", err?.response?.data || err?.message || err);
+      
+      Alert.alert(
+        "Login Failed",
+        err?.response?.data?.message || err?.message || "Something went wrong"
+      );
+    } finally {
+      setLoading(false);
+    }
 };
 
 

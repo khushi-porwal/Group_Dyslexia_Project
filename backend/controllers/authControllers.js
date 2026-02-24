@@ -64,7 +64,7 @@ const generateRefreshToken = (id) => {
 };
 
 exports.signup = async (req, res) => {
-  try {
+  try{
     const { name, email, password } = req.body;
 
     // Email exists?
@@ -87,10 +87,11 @@ exports.signup = async (req, res) => {
     });
 
     res.status(201).json({ message: "Signup successful", user: newUser });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+    } catch(err) {
+          res.status(500).json({error:err.message});
+    }
+  };
+
 
 exports.login = async (req, res) => {
   try {

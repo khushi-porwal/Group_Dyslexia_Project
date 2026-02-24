@@ -1,5 +1,4 @@
 import "./global.css"
  
-export default App() {
+export default App() 
   /* Your App */
-}

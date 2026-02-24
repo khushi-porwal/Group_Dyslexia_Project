@@ -128,7 +128,7 @@ export default function DashboardScreen() {
         {/* Gamified Assistant */}
         <TouchableOpacity
           className="bg-white rounded-2xl flex-row items-center px-6 py-5"
-          onPress={() => router.push("/assistants/games")}
+          onPress={() => router.push("/main/solutions/gamified")}
         >
           <FontAwesome5 name="gamepad" size={24} color="#7D3C98" />
           <View className="h-8 w-[1px] bg-purple-700 mx-3" />
