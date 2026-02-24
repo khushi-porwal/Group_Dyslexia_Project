@@ -4,51 +4,85 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
-const rateLimit = require("express-rate-limit");
-const authRoutes = require("./routes/authRoutes");
+const path = require("path");
 
 dotenv.config();
+
 const app = express();
 
-// Security Middlewares
-app.use(helmet()); // secure headers
-app.use(cors({
-  origin: ["http://localhost:8081", "http://localhost:8082"],
-  methods: "GET,POST,PUT,DELETE",
-  credentials: true
-}));
+/* ===============================
+   SECURITY & BASIC MIDDLEWARES
+================================ */
 
+// Helmet (allow images for mobile/web)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+// CORS (Expo + web + mobile)
+app.use(
+  cors({
+    origin: "*",
+  })
+);
+
+app.use(express.json());
 app.use(cookieParser());
 
-// Basic middlewares
-app.use(express.json());
+/* ===============================
+   STATIC FILES (IMAGES)
+================================ */
 
-// Rate Limiting - login par brute force attack rokne ke liye
-// app.use("/api/auth/login", rateLimit({
-//   windowMs: 10 * 60 * 1000, // 10 min
-//   max: 5,
-//   message: "Too many login attempts, please try later"
-// }));
+// Example:
+// http://<IP>:5000/uploads/words/apple.png
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    next();
+  },
+  express.static(path.join(__dirname, "uploads"))
+);
 
-// Routes
-app.use("/api/auth", authRoutes);
+/* ===============================
+   ROUTES
+================================ */
 
-// Health Route (Testing ke liye)
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/categories", require("./routes/categoryRoutes"));
+app.use("/api/words", require("./routes/wordRoutes"));
+app.use("/api/rapid-automated", require("./routes/rapidAutomation"));
+// phonological can stay, not harmful
+app.use("/api/phonological", require("./routes/phonologicalRoutes"));
+
+/* ===============================
+   HEALTH CHECK
+================================ */
+
 app.get("/", (req, res) => {
   res.send("Backend Running Securely 🚀");
 });
 
-// MongoDB Connect
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✔ MongoDB Connected Successfully");
-  })
-  .catch((err) => {
-    console.log("❌ MongoDB Error:", err.message);
-  });
+/* ===============================
+   DATABASE CONNECTION
+================================ */
 
-// Server Start
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✔ MongoDB Connected Successfully"))
+  .catch((err) =>
+    console.error("❌ MongoDB Connection Error:", err.message)
+  );
+
+/* ===============================
+   SERVER START
+================================ */
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
 });

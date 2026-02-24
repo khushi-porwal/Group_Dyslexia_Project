@@ -24,7 +24,7 @@ export default function SignUpScreen() {
     });
 
     Alert.alert("Success", "Account created!");
-    router.replace("/authentication/login");
+    router.push("/authentication/login");
 
   } catch (err) {
     console.log(err.response?.data);

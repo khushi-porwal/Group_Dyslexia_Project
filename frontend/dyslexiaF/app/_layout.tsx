@@ -1,19 +1,29 @@
 import "../global.css";
 import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StyleSheet } from "react-native";
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {/* Welcome */}
-      <Stack.Screen name="index" />
+    <GestureHandlerRootView style={styles.container}>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Welcome */}
+        <Stack.Screen name="index" />
 
-      {/* Auth Screens */}
-      <Stack.Screen name="authentication/login" />
-      <Stack.Screen name="authentication/signup" />
-      <Stack.Screen name="(main)"/>
+        {/* Auth Screens */}
+        <Stack.Screen name="authentication/login" />
+        <Stack.Screen name="authentication/signup" />
 
-      {/* Tabs */}
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+        {/* Main & Tabs */}
+        <Stack.Screen name="(main)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

@@ -39,9 +39,17 @@ exports.signup = async (req, res) => {
     });
 
     res.status(201).json({ message: "Signup successful", user: newUser });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (error) {
+  console.log("Signup error message:", error.message);
+  console.log("Signup error response:", error?.response?.data);
+  console.log("Signup error status:", error?.response?.status);
+
+  Alert.alert(
+    "Signup Failed",
+    error?.response?.data?.message || "Try again"
+  );
+}
+
 };
 
 exports.login = async (req, res) => {
@@ -67,7 +75,15 @@ exports.login = async (req, res) => {
       refreshToken,
       user,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  } catch (error) {
+  console.log("Signup error message:", error.message);
+  console.log("Signup error response:", error?.response?.data);
+  console.log("Signup error status:", error?.response?.status);
+
+  Alert.alert(
+    "Signup Failed",
+    error?.response?.data?.message || "Try again"
+  );
+}
+
 };
