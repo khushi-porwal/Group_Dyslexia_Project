@@ -113,25 +113,18 @@ const path = require("path");
  */
 const deleteUploadedFile = (file) => {
   if (!file) return;
-
-  const filePath = path.join(
-    __dirname,
-    "../uploads",
-    file.filename
-  );
-
+  const filePath = path.join(__dirname, "../uploads", file.filename);
   fs.unlink(filePath, () => {});
 };
 
 /**
  * CREATE WORD (REFERENCE IMAGE)
- * Used by Admin to upload correct drawing image
+ * Admin uploads reference image (NOT ML training data)
  */
 exports.createWord = async (req, res) => {
   try {
     const { text, category } = req.body;
 
-    // 1️⃣ BASIC VALIDATION
     if (!text || !category) {
       deleteUploadedFile(req.file);
       return res.status(400).json({
@@ -147,7 +140,6 @@ exports.createWord = async (req, res) => {
       });
     }
 
-    // 2️⃣ VALIDATE CATEGORY
     const categoryExists = await Category.findById(category);
     if (!categoryExists) {
       deleteUploadedFile(req.file);
@@ -157,10 +149,8 @@ exports.createWord = async (req, res) => {
       });
     }
 
-    // 3️⃣ NORMALIZE TEXT
     const normalizedText = text.trim().toLowerCase();
 
-    // 4️⃣ CHECK DUPLICATE WORD IN SAME CATEGORY
     const existingWord = await Word.findOne({
       text: normalizedText,
       category,
@@ -174,16 +164,15 @@ exports.createWord = async (req, res) => {
       });
     }
 
-    // 5️⃣ BUILD IMAGE URL (REFERENCE IMAGE)
     const imageUrl = `/uploads/${req.file.filename}`;
 
-    // 6️⃣ CREATE WORD
     const word = await Word.create({
       text: normalizedText,
       displayText: text.trim().replace(/\s+/g, " "),
       category,
       imageUrl,
-      minStrokes: 3,       // optional rule-based check
+      mlLabel: normalizedText, // 🔥 optional but future-proof
+      imageType: "reference",  // 🔥 clarity
       difficulty: "easy",
       marks: 10,
     });

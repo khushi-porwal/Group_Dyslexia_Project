@@ -6,6 +6,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import {
@@ -16,7 +17,7 @@ import {
 import axios from "axios";
 import { captureRef } from "react-native-view-shot";
 
-const BASE_URL = "http://192.168.0.183:5000";
+const BASE_URL = "http://192.168.0.183:5000"; // change if needed
 
 export default function RapidWritingScreen() {
   const [paths, setPaths] = useState([]);
@@ -25,8 +26,8 @@ export default function RapidWritingScreen() {
   const [words, setWords] = useState([]);
   const [selectedWord, setSelectedWord] = useState(null);
   const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // 🔑 REF FOR PNG CAPTURE
   const drawingRef = useRef(null);
 
   /* ============================
@@ -40,7 +41,7 @@ export default function RapidWritingScreen() {
         setCategories(res.data.data.categories);
         setWords(res.data.data.words);
       })
-      .catch(console.error);
+      .catch(() => Alert.alert("Failed to load data"));
   }, []);
 
   /* ============================
@@ -68,7 +69,23 @@ export default function RapidWritingScreen() {
   };
 
   /* ============================
-     TASK 1: DRAWING → PNG
+     URI → BASE64
+  ============================ */
+  const uriToBase64 = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () =>
+        resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  /* ============================
+     SUBMIT DRAWING
   ============================ */
   const handleResult = async () => {
     if (!selectedWord) {
@@ -76,32 +93,45 @@ export default function RapidWritingScreen() {
       return;
     }
 
-    if (paths.length < 1) {
-      Alert.alert("Please draw first");
+    // 🔴 IMPORTANT VALIDATION
+    if (paths.length < 3) {
+      Alert.alert("Draw more clearly before checking");
       return;
     }
 
     try {
-      // 📸 Convert drawing to PNG
+      setLoading(true);
+      setResult(null);
+
+      // 1️⃣ Capture drawing
       const imageUri = await captureRef(drawingRef, {
         format: "png",
         quality: 1,
       });
 
-      console.log("✅ DRAWING PNG:", imageUri);
+      // 2️⃣ Convert to Base64
+      const base64Image = await uriToBase64(imageUri);
 
-      Alert.alert(
-        "PNG Generated Successfully 🎉",
-        imageUri
-      );
+      // 3️⃣ Send to backend
+      const response = await axios.post(`${BASE_URL}/api/rapid-automated/evaluate`, {
+  userId: "demo-user-1",
+  wordId: selectedWord._id,
+  image: base64Image,
+  strokesCount: paths.length, // 🔥 REQUIRED
+});
 
-      // 🚫 Backend / ML comes in TASK-2
+      setResult(response.data.result);
     } catch (error) {
-      console.error("❌ PNG Capture Failed", error);
-      Alert.alert("Failed to capture drawing");
+      console.error(error);
+      Alert.alert("Could not evaluate drawing");
+    } finally {
+      setLoading(false);
     }
   };
 
+  /* ============================
+     UI
+  ============================ */
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ScrollView className="flex-1 bg-lime-400 p-4">
@@ -113,35 +143,29 @@ export default function RapidWritingScreen() {
           </Text>
         </View>
 
-        {/* IMAGE PREVIEW */}
+        {/* WORD PREVIEW */}
         {selectedWord && (
           <View className="bg-white rounded-xl p-3 items-center mb-4 shadow">
             <Text className="font-semibold mb-2">
               Draw this: {selectedWord.displayText}
             </Text>
 
-            {selectedWord.imageUrl ? (
-              <Image
-                source={{ uri: `${BASE_URL}${selectedWord.imageUrl}` }}
-                style={{ width: 140, height: 140 }}
-                resizeMode="contain"
-              />
-            ) : (
-              <Text style={{ color: "red" }}>
-                Image not available
-              </Text>
-            )}
+            <Image
+              source={{ uri: `${BASE_URL}${selectedWord.imageUrl}` }}
+              style={{ width: 140, height: 140 }}
+              resizeMode="contain"
+            />
           </View>
         )}
 
-        {/* DRAWING AREA (PNG SOURCE) */}
+        {/* DRAWING AREA */}
         <Text className="text-center font-semibold mb-2">
-          Interactive Drawing Area
+          Drawing Area
         </Text>
 
         <View
           ref={drawingRef}
-          collapsable={false}   // 🔑 REQUIRED FOR ANDROID
+          collapsable={false}
           style={{
             backgroundColor: "white",
             height: 256,
@@ -184,7 +208,7 @@ export default function RapidWritingScreen() {
               String(category.id)
           );
 
-          if (categoryWords.length === 0) return null;
+          if (!categoryWords.length) return null;
 
           return (
             <View key={category.id} className="mb-4">
@@ -207,14 +231,19 @@ export default function RapidWritingScreen() {
           );
         })}
 
-        {/* RESULT BUTTON */}
+        {/* SUBMIT BUTTON */}
         <TouchableOpacity
           onPress={handleResult}
+          disabled={loading}
           className="bg-green-800 py-4 rounded-full items-center"
         >
-          <Text className="text-white font-bold">
-            Generate PNG
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white font-bold">
+              Check Drawing
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* RESULT */}
@@ -223,13 +252,17 @@ export default function RapidWritingScreen() {
             className={`mt-4 p-3 rounded-xl ${
               result === "correct"
                 ? "bg-green-200"
+                : result === "almost"
+                ? "bg-yellow-200"
                 : "bg-red-200"
             }`}
           >
             <Text className="text-center font-bold text-lg">
               {result === "correct"
-                ? "Correct Writing 🎉"
-                : "Wrong Writing ❌ Try Again"}
+                ? "Recognized Correctly 🎉"
+                : result === "almost"
+                ? "Almost There ✨ Try clearer strokes"
+                : "Not Recognized ❌ Try Again"}
             </Text>
           </View>
         )}

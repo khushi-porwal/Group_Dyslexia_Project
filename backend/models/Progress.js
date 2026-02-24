@@ -12,41 +12,36 @@ const progressSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Word",
       required: true,
-      index: true,
     },
 
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      index: true,
     },
 
     expectedWord: {
       type: String,
-      trim: true,
+      required: true,
       lowercase: true,
     },
 
     strokesCount: {
       type: Number,
-      required: true,
+      default: 0,
     },
 
     score: {
       type: Number,
-      required: true,
       default: 0,
     },
 
     result: {
       type: String,
-      enum: ["correct", "wrong"],
+      enum: ["correct", "almost", "wrong"],
       required: true,
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Progress", progressSchema);

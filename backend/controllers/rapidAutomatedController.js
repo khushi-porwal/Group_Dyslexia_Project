@@ -104,130 +104,122 @@
 
 
 
-
-
 const axios = require("axios");
 const Word = require("../models/Word");
 const Progress = require("../models/Progress");
 
-/**
- * STEP 1: INIT DATA FOR RAPID WRITING SCREEN
- * (NO ML HERE)
- */
-exports.getConfig = async (req, res) => {
-  try {
-    const words = await Word.find()
-      .populate("category")
-      .sort({ createdAt: 1 })
-      .lean();
+const ML_URL = process.env.ML_URL || "http://127.0.0.1:8000";
 
-    const categories = [];
-    const seen = new Set();
-
-    words.forEach((w) => {
-      if (w.category && !seen.has(w.category._id.toString())) {
-        seen.add(w.category._id.toString());
-        categories.push({
-          id: w.category._id,
-          name: w.category.name,
-        });
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      data: { categories, words },
-    });
-  } catch (err) {
-    console.error("Config error:", err);
-    res.status(500).json({ success: false });
-  }
-};
-
-/**
- * STEP 2: EVALUATE DRAWING
- * (REAL ML DECISION)
- */
 exports.evaluateDrawing = async (req, res) => {
   try {
-    const { userId, wordId, image } = req.body;
+    const { userId, wordId, image, strokesCount } = req.body;
 
-    // 1️⃣ VALIDATION
+    /* =========================
+       1️⃣ BASIC VALIDATION
+    ========================== */
     if (!userId || !wordId || !image) {
       return res.status(400).json({
-        result: "wrong",
-        message: "Invalid input",
+        success: false,
+        message: "userId, wordId and image are required",
       });
     }
 
-    // 2️⃣ FETCH WORD
-    const word = await Word.findById(wordId).populate("category");
+    /* =========================
+       2️⃣ DRAWING QUALITY CHECK
+       (BLOCK BAD INPUT EARLY)
+    ========================== */
+    const MIN_STROKES = 3;
+    const MIN_IMAGE_SIZE = 5000; // base64 length
+
+    const safeStrokes = Number(strokesCount || 0);
+
+if (safeStrokes < MIN_STROKES || image.length < MIN_IMAGE_SIZE) {
+  return res.json({
+    success: true,
+    result: "wrong",
+    score: 0,
+    message: "Draw more clearly before checking",
+  });
+}
+
+    /* =========================
+       3️⃣ FETCH EXPECTED WORD
+    ========================== */
+    const word = await Word.findById(wordId);
     if (!word) {
       return res.status(404).json({
-        result: "wrong",
+        success: false,
         message: "Word not found",
       });
     }
 
-    // 3️⃣ CALL PYTHON ML SERVICE
+    /* =========================
+       4️⃣ CALL ML SERVICE
+       (SAFE + GUARDED)
+    ========================== */
     let mlResponse;
     try {
       mlResponse = await axios.post(
-        "http://localhost:8000/predict",
+        `${ML_URL}/predict`,
         { image },
         { timeout: 5000 }
       );
-    } catch (mlError) {
-      console.error("ML service error:", mlError.message);
-      return res.status(500).json({
+    } catch (err) {
+      console.error("ML service error:", err.message);
+      return res.json({
+        success: true,
         result: "wrong",
-        message: "ML service unavailable",
+        score: 0,
+        message: "Could not recognize drawing clearly",
       });
     }
 
     const { label, confidence } = mlResponse.data;
 
-    // Normalize text to avoid mismatch
-    const predictedLabel = label.trim().toLowerCase();
-    const expectedLabel = word.text.trim().toLowerCase();
+    const predictedLabel = String(label || "").toLowerCase().trim();
+    const expectedLabel = word.text.toLowerCase().trim();
 
-    // 4️⃣ CONFIDENCE-BASED DECISION LOGIC
-    let result;
+    /* =========================
+       5️⃣ DECISION LOGIC
+       (STRICT & EXPLAINABLE)
+    ========================== */
+    let result = "wrong";
     let score = 0;
 
-    if (predictedLabel === expectedLabel && confidence >= 0.8) {
+    if (predictedLabel === expectedLabel && confidence >= 0.95) {
       result = "correct";
       score = 1;
-    } else if (predictedLabel === expectedLabel && confidence >= 0.5) {
-      result = "almost"; // close but not perfect
-      score = 0;
-    } else {
-      result = "wrong";
-      score = 0;
+    } else if (predictedLabel === expectedLabel && confidence >= 0.7) {
+      result = "almost";
     }
 
-    // 5️⃣ SAVE PROGRESS
+    /* =========================
+       6️⃣ SAVE PROGRESS
+    ========================== */
     await Progress.create({
       userId,
       word: word._id,
-      category: word.category?._id || null,
+      category: word.category || null,
       expectedWord: word.text,
-      strokesCount: 0, // optional, kept for compatibility
       result,
       score,
     });
 
-    // 6️⃣ RESPONSE TO FRONTEND
-    res.json({
-      result,                 // correct | almost | wrong
-      score,                  // 1 or 0
-      predictedLabel,         // ML output
+    /* =========================
+       7️⃣ RESPONSE
+    ========================== */
+    return res.json({
+      success: true,
+      result,
+      score,
+      predictedLabel,
       confidence: Number(confidence.toFixed(2)),
     });
+
   } catch (error) {
     console.error("Evaluation error:", error);
-    res.status(500).json({
-      result: "wrong",
+    return res.status(500).json({
+      success: false,
       message: "Evaluation failed",
     });
   }
