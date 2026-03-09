@@ -1,32 +1,56 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import * as SpeechRecognition from "expo-speech-recognition";
-import { useState } from "react";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+import { useState, useCallback } from "react";
 
-export default function VoiceListener({ setText }) {
-  const [result, setResult] = useState("");
+export default function VoiceListener({ onResult, label = "Start Listening" }) {
+  const [transcript, setTranscript] = useState("");
+  const [listening, setListening] = useState(false);
 
-  const startListening = async () => {
-    const permission = await SpeechRecognition.requestPermissionsAsync();
-    if (!permission.granted) return;
+  useSpeechRecognitionEvent("result", (event) => {
+    const text = event?.results?.[0]?.transcript || "";
+    setTranscript(text);
+    onResult?.(text);
+  });
 
-    SpeechRecognition.start({
-      onResult: (res) => {
-        setResult(res.transcript);
-        setText(res.transcript);
-      },
+  useSpeechRecognitionEvent("end", () => setListening(false));
+
+  const toggleListening = useCallback(async () => {
+    if (listening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+
+    const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!permission?.granted) {
+      console.warn("Microphone permission not granted");
+      return;
+    }
+
+    setListening(true);
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+      continuous: false,
     });
-  };
+  }, [listening]);
 
   return (
     <View className="items-center">
       <TouchableOpacity
-        onPress={startListening}
-        className="bg-purple-600 px-5 py-3 rounded-xl"
+        onPress={toggleListening}
+        className={`px-5 py-3 rounded-xl ${
+          listening ? "bg-amber-500" : "bg-purple-600"
+        }`}
       >
-        <Text className="text-white">Start Listening 🎤</Text>
+        <Text className="text-white">
+          {listening ? "Stop Listening" : label}
+        </Text>
       </TouchableOpacity>
 
-      <Text className="mt-3 text-lg">{result}</Text>
+      {!!transcript && <Text className="mt-3 text-lg">{transcript}</Text>}
     </View>
   );
 }
