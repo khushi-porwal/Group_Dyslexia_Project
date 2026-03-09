@@ -88,9 +88,11 @@ const rateLimit = require("express-rate-limit");
 const authRoutes = require("./routes/authRoutes");
 const workingMemoryRoutes = require("./routes/workingMemoryRoutes");
 const historyRoutes = require("./routes/history");
+const readingRoutes = require("./routes/readingRoutes");
 
 dotenv.config();
 const app = express();
+
 
 // Security Middlewares
 app.use(helmet()); // secure headers
@@ -133,6 +135,7 @@ app.use("/api/phonological", require("./routes/phonologicalRoutes"));
 app.use("/api/working-memory", workingMemoryRoutes);
 app.use("/api/profile", require("./routes/profileRoutes"));
 app.use("/api/history", historyRoutes);
+app.use("/api/reading", readingRoutes);
 
 
 app.use((err, req, res, next) => {

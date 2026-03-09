@@ -98,7 +98,7 @@ export default function DashboardScreen() {
         {/* Reading Assistant */}
         <TouchableOpacity
           className="bg-white rounded-2xl flex-row items-center px-6 py-5"
-          onPress={() => router.push("/assistants/reading")}
+          onPress={() => router.push("/main/solutions/reading")}
         >
           <MaterialCommunityIcons name="book-open-page-variant" size={28} color="#7D3C98" />
           <View className="h-8 w-[1px] bg-purple-700 mx-3" />
